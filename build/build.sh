@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="v1.1.2"
+VERSION="v1.2.0"
 OUT="build/out"
 rm -rf "$OUT" && mkdir -p "$OUT"
 

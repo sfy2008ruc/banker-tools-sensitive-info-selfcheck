@@ -317,3 +317,27 @@ func TestPreviewEndpoint(t *testing.T) {
 		t.Fatalf("返回内容应为合法 JPEG: %v", err)
 	}
 }
+
+func TestConfigEndpoint(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	w := call(t, s.Handler(), "GET", "/api/config", "secret-token", nil)
+	if w.Code != 200 {
+		t.Fatalf("config 应 200，got %d", w.Code)
+	}
+	var c struct {
+		RuleVersion string   `json:"ruleVersion"`
+		Keywords    []string `json:"keywords"`
+		Extensions  []string `json:"extensions"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &c)
+	if c.RuleVersion != "test-rules" || len(c.Keywords) != 1 || c.Keywords[0] != "身份证" {
+		t.Fatalf("config 内容错误: %+v", c)
+	}
+	if len(c.Extensions) != 1 || c.Extensions[0] != ".jpg" {
+		t.Fatalf("后缀应下发: %+v", c.Extensions)
+	}
+	// 未授权
+	if w := call(t, s.Handler(), "GET", "/api/config", "", nil); w.Code != 401 {
+		t.Fatalf("无 token 应 401，got %d", w.Code)
+	}
+}

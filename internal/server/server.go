@@ -58,6 +58,7 @@ func (s *Server) Handler() http.Handler {
 		}
 	}
 
+	mux.HandleFunc("/api/config", api(http.MethodGet, s.handleConfig))
 	mux.HandleFunc("/api/scan", api(http.MethodPost, s.handleScan))
 	mux.HandleFunc("/api/scan/progress", api(http.MethodGet, s.handleProgress))
 	mux.HandleFunc("/api/scan/cancel", api(http.MethodPost, s.handleCancel))
@@ -114,6 +115,17 @@ func writeJSON(w http.ResponseWriter, v any) { json.NewEncoder(w).Encode(v) }
 func writeErr(w http.ResponseWriter, code int, msg string) {
 	w.WriteHeader(code)
 	writeJSON(w, map[string]string{"error": msg})
+}
+
+// handleConfig 供扫描页展示当前规则：敏感词、后缀、扫描范围（V1.2）。
+func (s *Server) handleConfig(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, map[string]any{
+		"ruleVersion": s.Resolved.Version,
+		"ruleBuiltin": s.Resolved.BuiltinFallback,
+		"keywords":    s.Resolved.Keywords,
+		"extensions":  s.Resolved.Extensions,
+		"scanRoots":   platform.ExpandAll(s.Resolved.ScanRoots),
+	})
 }
 
 func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {

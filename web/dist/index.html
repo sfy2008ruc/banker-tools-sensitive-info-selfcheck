@@ -50,6 +50,10 @@
   .footbar .spacer { flex: 1; }
   .muted { color: #718096; font-size: 13px; }
   .empty { text-align: center; color: #718096; padding: 48px 0; font-size: 16px; }
+  .sect { border-top: 1px solid #edf2f7; padding: 18px 2px 4px; }
+  .sect-title { font-size: 15px; font-weight: bold; margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: #ebf4ff; color: #2b6cb0; border-radius: 4px; padding: 5px 12px; font-size: 15px; }
   .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 50; }
   .modal { background: #fff; border-radius: 10px; padding: 26px; max-width: 440px; width: 92%; }
   .modal h3 { margin-bottom: 12px; font-size: 18px; }
@@ -74,15 +78,27 @@
 
   <!-- P1 扫描页 -->
   <div class="card" id="viewScan">
-    <div class="center" id="scanIdle">
-      <p style="margin-bottom:8px;font-size:18px">点击开始，对本机进行敏感文件自查</p>
-      <p class="muted" style="margin-bottom:16px" id="scanRootsHint">扫描范围：用户目录及数据盘（系统目录自动排除）</p>
-      <div style="margin-bottom:22px">
-        <input id="extraKw" style="width:440px;max-width:92%;padding:9px 12px;font-size:15px;border:1px solid #cbd5e0;border-radius:6px"
-               placeholder="补充搜索词，用、分隔，仅本次扫描生效（可留空）">
-        <p class="muted" style="margin-top:6px">补充词与统一规则合并使用，不会保存、也不能减少统一规则</p>
+    <div id="scanIdle">
+      <div class="center" style="padding:24px 0 28px">
+        <button class="btn btn-primary btn-lg" id="btnScan">开始自查</button>
+        <p class="muted" style="margin-top:14px" id="scanRootsHint">扫描范围：用户目录及数据盘（系统目录自动排除）</p>
       </div>
-      <button class="btn btn-primary btn-lg" id="btnScan">开始自查</button>
+
+      <div class="sect">
+        <div class="sect-title">本次将搜索的敏感词 <span class="badge" id="kwCount"></span></div>
+        <div id="kwList" class="chips"><span class="muted">加载中…</span></div>
+        <p class="muted" style="margin-top:8px">
+          以上为统一规则中的敏感词，另会检查常用目录（桌面、下载、文档等）中的
+          <span id="extList"></span> 等常见文档与扫描件
+        </p>
+      </div>
+
+      <div class="sect">
+        <div class="sect-title">补充搜索词（可选）</div>
+        <input id="extraKw" style="width:100%;padding:10px 12px;font-size:15px;border:1px solid #cbd5e0;border-radius:6px"
+               placeholder="例如：尽调、评估报告、抵押物（多个词用顿号分隔）">
+        <p class="muted" style="margin-top:8px">仅对本次扫描生效，不会保存；只能在统一规则之外增加，不能减少统一规则中的敏感词</p>
+      </div>
     </div>
     <div class="center" id="scanRunning" style="display:none">
       <p style="font-size:18px">正在扫描，请稍候…</p>
@@ -257,6 +273,20 @@
   $('tabQuar').onclick = function () { loadQuar(); };
 
   /* ---------- P1 扫描 ---------- */
+  // 载入当前规则，在扫描页展示敏感词清单
+  api('/api/config').then(function (c) {
+    $('ruleInfo').textContent = '规则版本 ' + c.ruleVersion + (c.ruleBuiltin ? '（内置规则）' : '');
+    var kws = c.keywords || [];
+    $('kwCount').textContent = kws.length + ' 个';
+    $('kwList').innerHTML = kws.map(function (k) {
+      return '<span class="chip">' + esc(k) + '</span>';
+    }).join('') || '<span class="muted">规则中未配置敏感词</span>';
+    $('extList').textContent = (c.extensions || []).join('、');
+    if (c.scanRoots && c.scanRoots.length) {
+      $('scanRootsHint').textContent = '扫描范围：' + c.scanRoots.join('、') + '（系统目录自动排除）';
+    }
+  }).catch(function () {});
+
   var pollTimer;
   $('btnScan').onclick = function () {
     // 补充搜索词：顿号/逗号/空白分隔，仅本次扫描生效（后端合并、不落盘）
