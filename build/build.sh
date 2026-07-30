@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="v1.2.0"
+VERSION="v1.2.1"
 OUT="build/out"
 rm -rf "$OUT" && mkdir -p "$OUT"
 
@@ -13,7 +13,7 @@ LDFLAGS="-s -w"
 # 更换图标后用以下命令重新生成（需要联网）：
 #   go run github.com/akavel/rsrc@latest -ico assets/icon.ico -arch amd64 -o cmd/selfcheck/rsrc_windows_amd64.syso
 
-stage() { # stage <目录名> <可执行文件路径>
+stage() { # stage <目录名>
   local dir="$OUT/$1"
   mkdir -p "$dir"
   cp rules.json "$dir/"
@@ -30,13 +30,17 @@ stage() { # stage <目录名> <可执行文件路径>
 二、使用步骤（无需安装、无需管理员权限）
   1. 将压缩包解压到任意位置（如桌面）
   2. 启动：
-     - Windows：双击 selfcheck.exe
+     - Windows：双击"双击启动-敏感自查工具.exe"（红色"查"字图标的那个）
+       如果没有自动打开浏览器，程序会弹窗提示，按提示把地址粘贴到
+       Chrome 浏览器打开即可；地址也会存在同目录"自查页面地址.txt"里
      - Mac：双击"敏感自查工具.app"（首次如提示无法验证开发者，
        请在图标上右键→打开，或到"系统设置→隐私与安全性"点"仍要打开"；
        Mac 版规则文件位于 app 内：右键→显示包内容→Contents/MacOS/rules.json）
      - 信创/Linux：双击 start.sh（或"启动自查工具"图标）
-  3. 浏览器会自动打开自查页面，按页面提示操作：
-     扫描 → 勾选可疑文件 → 移入暂存区 → 确认删除 → 导出自查报告
+  3. 浏览器会自动打开自查页面（优先使用 Chrome），页面上按三步操作：
+     ① 点最上方蓝色"开始自查"按钮，等待扫描完成
+     ② 在结果页核对文件，勾选确实要清理的，点"移入待删除暂存区"
+     ③ 在暂存区页再核对一遍，点"确认删除"，最后"导出自查报告"留档
   4. 报告自动保存在"主目录/待删除文件区/reports/"下，请留存备查
 
 三、说明
@@ -47,9 +51,10 @@ EOF
 }
 
 echo "== windows/amd64"
-GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS -H windowsgui" -o "$OUT/win/selfcheck.exe" ./cmd/selfcheck
-stage win "selfcheck.exe"
-(cd "$OUT/win" && zip -qr "../自查工具-$VERSION-windows-x64.zip" .)
+# 文件名直接写明"双击启动"，避免同事不知道该点哪个文件（V1.2.1 用户反馈）
+GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS -H windowsgui" -o "$OUT/win/双击启动-敏感自查工具.exe" ./cmd/selfcheck
+stage win
+python3 build/mkzip.py "$OUT/win" "$OUT/自查工具-$VERSION-windows-x64.zip"
 
 linux_pkg() { # linux_pkg <goarch> <目录名> <包名架构标识>
   local arch="$1" tag="$2" label="$3" dir="$OUT/$2"
@@ -111,7 +116,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
 EOF
 chmod +x "$APP/Contents/MacOS/selfcheck"
 stage mac selfcheck
-(cd "$OUT/mac" && zip -qry "../自查工具-$VERSION-macos-universal.zip" .)
+python3 build/mkzip.py "$OUT/mac" "$OUT/自查工具-$VERSION-macos-universal.zip"
 
 echo "== 生成 GitHub 发布用 ASCII 命名副本（GitHub 会剥离附件名中的中文）"
 (cd "$OUT" &&

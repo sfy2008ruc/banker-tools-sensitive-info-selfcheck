@@ -3,7 +3,6 @@ package platform
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -43,16 +42,4 @@ func ExpandAll(paths []string) []string {
 	return out
 }
 
-// OpenBrowser 用系统默认浏览器打开 url；失败不致命，由调用方打印地址兜底。
-func OpenBrowser(url string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default: // linux / 信创
-		cmd = exec.Command("xdg-open", url)
-	}
-	return cmd.Start()
-}
+// OpenBrowser 见 browser.go（Chrome 优先，兜底交系统默认程序）。

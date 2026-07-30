@@ -24,7 +24,7 @@ import (
 )
 
 // Version 与规则版本一同打印在自查报告中（spec 10.2）。
-const Version = "v1.2.0"
+const Version = "v1.2.1"
 
 func main() {
 	log.SetFlags(log.Ltime)
@@ -100,7 +100,12 @@ func main() {
 	if os.Getenv("SELFCHECK_NO_BROWSER") == "1" {
 		log.Println("SELFCHECK_NO_BROWSER=1，跳过自动打开浏览器。请访问：")
 	} else if err := platform.OpenBrowser(url); err != nil {
+		// Windows 为 GUI 模式无控制台，必须弹窗告知，否则用户以为双击没反应
 		log.Println("未能自动打开浏览器，请手动在浏览器打开以下地址：")
+		platform.Notify("请手动打开浏览器",
+			"未能自动打开浏览器。\n\n请复制下面的地址，粘贴到 Chrome 浏览器中打开：\n\n"+url+
+				"\n\n（地址已同时保存到程序目录下的\"自查页面地址.txt\"）")
+		os.WriteFile(filepath.Join(exeDir, "自查页面地址.txt"), []byte(url+"\n"), 0o644)
 	} else {
 		log.Println("已在浏览器中打开自查页面。若未打开，请手动访问：")
 	}

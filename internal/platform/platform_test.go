@@ -47,3 +47,19 @@ func TestMovePath(t *testing.T) {
 		t.Fatalf("目标内容错误: %s, %v", data, err)
 	}
 }
+
+func TestFindChromeReturnsExistingPathOrEmpty(t *testing.T) {
+	// 找到就必须是真实存在的可执行文件；找不到返回空串由 openWithDefault 兜底
+	p := findChrome()
+	if p == "" {
+		t.Log("本机未安装 Chrome/Edge/Chromium，将走系统默认浏览器")
+		return
+	}
+	if st, err := os.Stat(p); err != nil || st.IsDir() {
+		t.Fatalf("findChrome 返回了无效路径: %s (%v)", p, err)
+	}
+}
+
+func TestNotifyDoesNotPanic(t *testing.T) {
+	Notify("测试", "非 Windows 平台仅打印日志")
+}

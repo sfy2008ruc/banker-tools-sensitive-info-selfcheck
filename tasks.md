@@ -96,3 +96,10 @@
 - [x] 采用 D 方案：红底白字大"查"，去掉文档/放大镜等小尺寸糊掉的元素
 - [x] assets 全套重生成 + .ico/.icns/.syso 更新
 - **验收**：32px 缩略实测字形清晰 ✓；exe 内嵌新图标已校验 ✓
+
+## T19 试用反馈修复（V1.2.1）
+- [x] 浏览器改为 Chrome 优先：按已知安装路径直接调起 chrome.exe（Win 还兜底 Edge，Linux 查 PATH 中 chromium 系），找不到才交系统默认程序——避免 Windows 未设默认浏览器时弹"你要如何打开"选择框
+- [x] Windows GUI 模式无控制台，浏览器调起失败时用 MessageBoxW 弹窗给出地址，并写入同目录"自查页面地址.txt"（此前是完全静默，用户以为双击没反应）
+- [x] Windows 可执行文件改名为"双击启动-敏感自查工具.exe"，使用说明补充三步操作指引
+- [x] **打包改用 build/mkzip.py**：macOS 的 zip 命令不设 UTF-8 文件名标志，Windows 解压后中文名显示为乱码（实测 `使用说明.txt` → `Σ╜┐τö¿Φ»┤µÿÄ.txt`），这很可能是"不知道点哪个文件"的真正原因
+- **验收**：`TestFindChromeReturnsExistingPathOrEmpty` 通过；本机实测 Chrome 被正确拉起 ✓；zip 内条目 UTF-8 标志全部置位 ✓；mac .app 解压后 +x 保留且可运行 ✓
