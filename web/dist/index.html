@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电脑敏感文件自查工具</title>
+<style>
+  /* Chrome 90 基线：不使用 :has()、容器查询等新特性；全部资源内联零外部请求 */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; background: #f2f5f9; color: #1a202c; font-size: 16px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 90px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; }
+  header .sub { color: #718096; font-size: 13px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { padding: 8px 20px; border-radius: 6px 6px 0 0; background: #dde5ee; cursor: pointer; border: none; font-size: 16px; }
+  .tab.active { background: #2b6cb0; color: #fff; }
+  .tab:disabled { opacity: .45; cursor: not-allowed; }
+  .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .btn { display: inline-block; border: none; border-radius: 6px; padding: 10px 22px; font-size: 16px; cursor: pointer; background: #e2e8f0; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: #2b6cb0; color: #fff; }
+  .btn-danger { background: #c53030; color: #fff; }
+  .btn-lg { font-size: 20px; padding: 14px 44px; }
+  .btn-sm { font-size: 13px; padding: 4px 12px; }
+  .center { text-align: center; padding: 40px 0; }
+  .progress-nums { display: flex; gap: 32px; justify-content: center; margin: 20px 0; }
+  .progress-nums div { text-align: center; }
+  .progress-nums b { display: block; font-size: 30px; color: #2b6cb0; }
+  .progress-nums span { font-size: 13px; color: #718096; }
+  .bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin: 16px auto; max-width: 480px; }
+  .bar i { display: block; height: 100%; width: 40%; background: #2b6cb0; border-radius: 3px; animation: slide 1.2s infinite ease-in-out; }
+  @keyframes slide { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+  .stat-line { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; font-size: 15px; }
+  .stat-line .hl { color: #c53030; font-weight: bold; }
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; }
+  .toolbar select { font-size: 14px; padding: 5px; }
+  .group-title { margin: 18px 0 8px; font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #edf2f7; color: #4a5568; font-weight: normal; }
+  .badge-high { background: #fed7d7; color: #c53030; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; text-align: left; vertical-align: top; }
+  th { color: #718096; font-weight: normal; font-size: 13px; white-space: nowrap; }
+  td.path { word-break: break-all; color: #4a5568; font-size: 13px; cursor: pointer; }
+  td.path:hover { color: #2b6cb0; text-decoration: underline; }
+  .tag { display: inline-block; background: #ebf4ff; color: #2b6cb0; border-radius: 3px; padding: 1px 6px; margin: 1px 3px 1px 0; font-size: 12px; white-space: nowrap; }
+  .tag-warn { background: #fefcbf; color: #975a16; }
+  .footbar { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; box-shadow: 0 -2px 8px rgba(0,0,0,.1); padding: 12px 16px; display: none; }
+  .footbar .inner { max-width: 1080px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .footbar .spacer { flex: 1; }
+  .muted { color: #718096; font-size: 13px; }
+  .empty { text-align: center; color: #718096; padding: 48px 0; font-size: 16px; }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal { background: #fff; border-radius: 10px; padding: 26px; max-width: 440px; width: 92%; }
+  .modal h3 { margin-bottom: 12px; font-size: 18px; }
+  .modal p { margin-bottom: 20px; line-height: 1.7; color: #4a5568; }
+  .modal .acts { display: flex; gap: 12px; justify-content: flex-end; }
+  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); background: #2d3748; color: #fff; padding: 10px 22px; border-radius: 6px; font-size: 14px; display: none; z-index: 60; }
+  .done-icon { font-size: 56px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>电脑敏感文件自查工具</h1>
+    <span class="sub" id="ruleInfo"></span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="tabScan">1. 扫描</button>
+    <button class="tab" id="tabResults" disabled>2. 扫描结果</button>
+    <button class="tab" id="tabQuar">3. 待删除暂存区</button>
+  </div>
+
+  <!-- P1 扫描页 -->
+  <div class="card" id="viewScan">
+    <div class="center" id="scanIdle">
+      <p style="margin-bottom:8px;font-size:18px">点击开始，对本机进行敏感文件自查</p>
+      <p class="muted" style="margin-bottom:16px" id="scanRootsHint">扫描范围：用户目录及数据盘（系统目录自动排除）</p>
+      <div style="margin-bottom:22px">
+        <input id="extraKw" style="width:440px;max-width:92%;padding:9px 12px;font-size:15px;border:1px solid #cbd5e0;border-radius:6px"
+               placeholder="补充搜索词，用、分隔，仅本次扫描生效（可留空）">
+        <p class="muted" style="margin-top:6px">补充词与统一规则合并使用，不会保存、也不能减少统一规则</p>
+      </div>
+      <button class="btn btn-primary btn-lg" id="btnScan">开始自查</button>
+    </div>
+    <div class="center" id="scanRunning" style="display:none">
+      <p style="font-size:18px">正在扫描，请稍候…</p>
+      <div class="bar"><i></i></div>
+      <div class="progress-nums">
+        <div><b id="pDirs">0</b><span>已扫目录</span></div>
+        <div><b id="pFound">0</b><span>发现可疑文件</span></div>
+        <div><b id="pElapsed">0s</b><span>耗时</span></div>
+      </div>
+      <button class="btn" id="btnCancel">取消扫描</button>
+    </div>
+  </div>
+
+  <!-- P2 结果页 -->
+  <div class="card" id="viewResults" style="display:none">
+    <div class="stat-line">
+      <span>共发现 <b id="rTotal">0</b> 个可疑文件，其中 <span class="hl" id="rHigh">0</span> 个高风险（已预勾选）</span>
+      <span class="muted" id="rSkipped"></span>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-sm" id="btnSelAll">全选</button>
+      <button class="btn btn-sm" id="btnSelInv">反选</button>
+      <label>排序：<select id="sortSel">
+        <option value="risk">风险优先</option>
+        <option value="time">修改时间</option>
+        <option value="size">大小</option>
+      </select></label>
+      <label>后缀：<select id="extSel"><option value="">全部</option></select></label>
+      <label>时间：<select id="timeSel">
+        <option value="">全部</option>
+        <option value="in30">最近一个月有变动</option>
+        <option value="out30">一个月之前</option>
+        <option value="out90">三个月之前</option>
+      </select></label>
+      <span class="muted">点击路径可复制</span>
+    </div>
+    <div id="resultGroups"></div>
+  </div>
+
+  <!-- P3 暂存区页 -->
+  <div class="card" id="viewQuar" style="display:none">
+    <div id="quarBody"></div>
+  </div>
+
+  <!-- 完成页 -->
+  <div class="card center" id="viewDone" style="display:none">
+    <div class="done-icon">✅</div>
+    <p style="font-size:20px;margin-bottom:8px">本次自查已完成</p>
+    <p class="muted">程序已退出，可以关闭此页面。</p>
+  </div>
+</div>
+
+<!-- 底部操作条 -->
+<div class="footbar" id="footResults">
+  <div class="inner">
+    <span class="muted">已勾选 <b id="selCount">0</b> 个文件</span>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="btnMoveIn" disabled>移入待删除暂存区</button>
+  </div>
+</div>
+<div class="footbar" id="footQuar">
+  <div class="inner">
+    <span class="muted" id="quarStat"></span>
+    <div class="spacer"></div>
+    <button class="btn" id="btnRestoreAll">全部还原</button>
+    <button class="btn btn-danger" id="btnDeleteAll">确认删除</button>
+    <button class="btn" id="btnReport">导出自查报告</button>
+    <button class="btn btn-primary" id="btnExit">完成并退出</button>
+  </div>
+</div>
+
+<!-- 二次确认弹窗 -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <h3 id="mTitle"></h3>
+    <p id="mBody"></p>
+    <div class="acts">
+      <button class="btn" id="mCancel">取消</button>
+      <button class="btn btn-danger" id="mOK">确认</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 基础 ---------- */
+  var TOKEN = (function () {
+    var m = location.search.match(/[?&]token=([^&]+)/);
+    var t = m ? decodeURIComponent(m[1]) : '';
+    if (m && history.replaceState) history.replaceState(null, '', location.pathname); // 地址栏去 token
+    return t;
+  })();
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    opts.headers['X-Token'] = TOKEN;
+    if (opts.body) opts.headers['Content-Type'] = 'application/json';
+    return fetch(path, opts).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        return j;
+      });
+    });
+  }
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function fmtSize(b) {
+    if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+    if (b >= 1024) return Math.round(b / 1024) + ' KB';
+    return b + ' B';
+  }
+  function fmtTime(iso) {
+    var d = new Date(iso);
+    function p(n) { return n < 10 ? '0' + n : n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.style.display = 'none'; }, 2200);
+  }
+  function confirmModal(title, body, cb) {
+    $('mTitle').textContent = title;
+    $('mBody').textContent = body;
+    $('modalMask').style.display = 'flex';
+    $('mOK').onclick = function () { $('modalMask').style.display = 'none'; cb(); };
+    $('mCancel').onclick = function () { $('modalMask').style.display = 'none'; };
+  }
+  function copyText(s) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(s).then(function () { toast('路径已复制'); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = s; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('路径已复制');
+    }
+  }
+
+  /* ---------- 状态 ---------- */
+  var state = {
+    view: 'scan',
+    results: [],       // 本次扫描结果
+    selected: {},      // path -> true
+    quar: [],          // 暂存区 pending 条目
+    scanned: false
+  };
+
+  var views = { scan: 'viewScan', results: 'viewResults', quar: 'viewQuar', done: 'viewDone' };
+  function show(view) {
+    state.view = view;
+    for (var k in views) $(views[k]).style.display = (k === view) ? 'block' : 'none';
+    $('footResults').style.display = (view === 'results' && state.results.length) ? 'block' : 'none';
+    $('footQuar').style.display = (view === 'quar') ? 'block' : 'none';
+    $('tabScan').className = 'tab' + (view === 'scan' ? ' active' : '');
+    $('tabResults').className = 'tab' + (view === 'results' ? ' active' : '');
+    $('tabQuar').className = 'tab' + (view === 'quar' ? ' active' : '');
+  }
+  $('tabScan').onclick = function () { show('scan'); };
+  $('tabResults').onclick = function () { if (state.scanned) show('results'); };
+  $('tabQuar').onclick = function () { loadQuar(); };
+
+  /* ---------- P1 扫描 ---------- */
+  var pollTimer;
+  $('btnScan').onclick = function () {
+    // 补充搜索词：顿号/逗号/空白分隔，仅本次扫描生效（后端合并、不落盘）
+    var extra = $('extraKw').value.split(/[、，,\s]+/).filter(function (k) { return k; });
+    api('/api/scan', { method: 'POST', body: JSON.stringify({ extraKeywords: extra }) }).then(function () {
+      $('scanIdle').style.display = 'none';
+      $('scanRunning').style.display = 'block';
+      pollTimer = setInterval(poll, 500);
+    }).catch(function (e) { toast(e.message); });
+  };
+  $('btnCancel').onclick = function () {
+    api('/api/scan/cancel', { method: 'POST' }).catch(function () {});
+  };
+  function poll() {
+    api('/api/scan/progress').then(function (p) {
+      $('pDirs').textContent = p.dirsScanned;
+      $('pFound').textContent = p.found;
+      $('pElapsed').textContent = Math.round(p.elapsedMs / 1000) + 's';
+      if (p.roots && p.roots.length) {
+        $('scanRootsHint').textContent = '扫描范围：' + p.roots.join('、');
+      }
+      if (p.status === 'done' || p.status === 'cancelled') {
+        clearInterval(pollTimer);
+        $('scanIdle').style.display = 'block';
+        $('scanRunning').style.display = 'none';
+        if (p.status === 'cancelled') { toast('扫描已取消'); return; }
+        loadResults(p);
+      }
+    }).catch(function () {});
+  }
+
+  /* ---------- P2 结果 ---------- */
+  function loadResults(progress) {
+    api('/api/results').then(function (data) {
+      state.results = data.results || [];
+      state.scanned = true;
+      state.selected = {};
+      $('tabResults').disabled = false;
+      $('ruleInfo').textContent = '规则版本 ' + data.ruleVersion + (data.ruleBuiltin ? '（内置规则）' : '');
+      var high = 0, extSet = {};
+      state.results.forEach(function (r) {
+        if (r.risk === 'high') { high++; state.selected[r.path] = true; } // 高风险预勾选
+        var ext = r.name.indexOf('.') >= 0 ? r.name.slice(r.name.lastIndexOf('.')).toLowerCase() : '';
+        if (ext) extSet[ext] = true;
+      });
+      $('rTotal').textContent = state.results.length;
+      $('rHigh').textContent = high;
+      $('rSkipped').textContent = progress && progress.skippedNoAccess
+        ? '（' + progress.skippedNoAccess + ' 处无权限目录已跳过）' : '';
+      var extSel = $('extSel');
+      extSel.innerHTML = '<option value="">全部</option>';
+      Object.keys(extSet).sort().forEach(function (e) {
+        var o = document.createElement('option'); o.value = e; o.textContent = e;
+        extSel.appendChild(o);
+      });
+      renderResults();
+      show('results');
+      if (!state.results.length) toast('未发现可疑文件');
+    }).catch(function (e) { toast(e.message); });
+  }
+
+  function visibleResults() {
+    var ext = $('extSel').value;
+    var tf = $('timeSel').value;
+    var now = Date.now(), D30 = 30 * 864e5, D90 = 90 * 864e5;
+    var list = state.results.filter(function (r) {
+      if (ext && r.name.toLowerCase().slice(-ext.length) !== ext) return false;
+      if (tf) {
+        var age = now - new Date(r.modifiedAt).getTime();
+        if (tf === 'in30' && age > D30) return false;
+        if (tf === 'out30' && age <= D30) return false;
+        if (tf === 'out90' && age <= D90) return false;
+      }
+      return true;
+    });
+    var sort = $('sortSel').value;
+    list = list.slice();
+    if (sort === 'time') {
+      list.sort(function (a, b) { return new Date(b.modifiedAt) - new Date(a.modifiedAt); });
+    } else if (sort === 'size') {
+      list.sort(function (a, b) { return b.sizeBytes - a.sizeBytes; });
+    } // risk：保持后端顺序（高风险置顶+时间倒序）
+    return list;
+  }
+
+  function ruleLabel(m) {
+    if (m.indexOf('keyword:') === 0) return '敏感词“' + m.slice(8) + '”';
+    if (m.indexOf('ext:') === 0) return '常见文档/扫描件（' + m.slice(4).replace('@hotdir', '，位于常用目录') + '）';
+    return m;
+  }
+
+  function isPreviewable(name) {
+    return /\.(jpe?g|png|gif)$/i.test(name);
+  }
+
+  function rowHTML(r) {
+    var checked = state.selected[r.path] ? ' checked' : '';
+    var tags = r.matchedRules.map(function (m) { return '<span class="tag">' + esc(ruleLabel(m)) + '</span>'; }).join('');
+    (r.tags || []).forEach(function (t) { tags += '<span class="tag tag-warn">' + esc(t) + '</span>'; });
+    var acts = (isPreviewable(r.name) ? '<button class="btn btn-sm act-prev" data-path="' + esc(r.path) + '">预览</button> ' : '') +
+      '<button class="btn btn-sm act-open" data-path="' + esc(r.path) + '">打开</button> ' +
+      '<button class="btn btn-sm act-dir" data-path="' + esc(r.path) + '">文件夹</button>';
+    return '<tr>' +
+      '<td><input type="checkbox" class="ck" data-path="' + esc(r.path) + '"' + checked + '></td>' +
+      '<td>' + esc(r.name) + '</td>' +
+      '<td class="path" data-copy="' + esc(r.path) + '" title="点击复制">' + esc(r.path) + '</td>' +
+      '<td style="white-space:nowrap">' + fmtSize(r.sizeBytes) + '</td>' +
+      '<td style="white-space:nowrap">' + fmtTime(r.modifiedAt) + '</td>' +
+      '<td>' + tags + '</td>' +
+      '<td style="white-space:nowrap">' + acts + '</td></tr>';
+  }
+
+  function renderResults() {
+    var list = visibleResults();
+    var groups = [
+      { key: 'high', title: '高风险（敏感词 + 常用目录双命中）', badge: 'badge-high', rows: [] },
+      { key: 'kw', title: '文件名含敏感词', badge: '', rows: [] },
+      { key: 'ext', title: '常用目录中的文档/扫描件', badge: '', rows: [] }
+    ];
+    list.forEach(function (r) {
+      var hasKw = r.matchedRules.some(function (m) { return m.indexOf('keyword:') === 0; });
+      var g = r.risk === 'high' ? groups[0] : (hasKw ? groups[1] : groups[2]);
+      g.rows.push(rowHTML(r));
+    });
+    var html = '';
+    groups.forEach(function (g) {
+      if (!g.rows.length) return;
+      html += '<div class="group-title">' + g.title +
+        ' <span class="badge ' + g.badge + '">' + g.rows.length + ' 个</span></div>' +
+        '<table><tr><th></th><th>文件名</th><th>完整路径</th><th>大小</th><th>修改时间</th><th>命中原因</th><th>操作</th></tr>' +
+        g.rows.join('') + '</table>';
+    });
+    $('resultGroups').innerHTML = html || '<div class="empty">🎉 未发现可疑文件，电脑很干净</div>';
+    updateSelCount();
+  }
+
+  $('sortSel').onchange = renderResults;
+  $('extSel').onchange = renderResults;
+  $('timeSel').onchange = renderResults;
+  $('resultGroups').addEventListener('change', function (e) {
+    if (e.target.className === 'ck') {
+      var p = e.target.getAttribute('data-path');
+      if (e.target.checked) state.selected[p] = true; else delete state.selected[p];
+      updateSelCount();
+    }
+  });
+  $('resultGroups').addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t.getAttribute) return;
+    var p = t.getAttribute('data-path');
+    if (p && t.className.indexOf('act-open') >= 0) { openPath(p, 'file'); return; }
+    if (p && t.className.indexOf('act-dir') >= 0) { openPath(p, 'folder'); return; }
+    if (p && t.className.indexOf('act-prev') >= 0) { togglePreview(t, p); return; }
+    var c = t.getAttribute('data-copy');
+    if (c) copyText(c);
+  });
+
+  function openPath(p, mode) {
+    api('/api/open', { method: 'POST', body: JSON.stringify({ path: p, mode: mode }) })
+      .then(function () {
+        if (mode === 'file') toast('已用系统程序打开，查看后请关闭文件再进行移入操作');
+      })
+      .catch(function (e) { toast(e.message); });
+  }
+
+  // 点击"预览"在该行下方展开缩略图；再点收起（敏感照片不平铺展示）
+  function togglePreview(btn, path) {
+    var tr = btn.closest('tr');
+    if (!tr) return;
+    var next = tr.nextElementSibling;
+    if (next && next.className === 'prev-row') {
+      next.parentNode.removeChild(next);
+      btn.textContent = '预览';
+      return;
+    }
+    btn.textContent = '收起';
+    var pr = document.createElement('tr');
+    pr.className = 'prev-row';
+    var td = document.createElement('td');
+    td.colSpan = 7;
+    td.textContent = '预览加载中…';
+    td.style.background = '#f7fafc';
+    pr.appendChild(td);
+    tr.parentNode.insertBefore(pr, tr.nextSibling);
+    fetch('/api/preview?path=' + encodeURIComponent(path), { headers: { 'X-Token': TOKEN } })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || '预览失败'); });
+        return r.blob();
+      })
+      .then(function (b) {
+        td.textContent = '';
+        var img = document.createElement('img');
+        img.src = URL.createObjectURL(b);
+        img.style.maxHeight = '260px';
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '4px';
+        img.style.margin = '6px 0';
+        td.appendChild(img);
+      })
+      .catch(function (e) { td.textContent = '⚠ ' + e.message; });
+  }
+  $('btnSelAll').onclick = function () {
+    visibleResults().forEach(function (r) { state.selected[r.path] = true; });
+    renderResults();
+  };
+  $('btnSelInv').onclick = function () {
+    visibleResults().forEach(function (r) {
+      if (state.selected[r.path]) delete state.selected[r.path]; else state.selected[r.path] = true;
+    });
+    renderResults();
+  };
+  function updateSelCount() {
+    var n = Object.keys(state.selected).length;
+    $('selCount').textContent = n;
+    $('btnMoveIn').disabled = !n;
+    $('footResults').style.display = (state.view === 'results' && state.results.length) ? 'block' : 'none';
+  }
+
+  $('btnMoveIn').onclick = function () {
+    var paths = Object.keys(state.selected);
+    if (!paths.length) return;
+    api('/api/quarantine', { method: 'POST', body: JSON.stringify({ paths: paths }) })
+      .then(function (res) {
+        var fail = res.results.filter(function (r) { return !r.ok; });
+        if (fail.length) toast(fail.length + ' 个文件移入失败，其余成功');
+        else toast('已移入暂存区 ' + res.results.length + ' 个文件');
+        // 从结果中剔除已成功移入的
+        var okSet = {};
+        res.results.forEach(function (r) { if (r.ok) okSet[r.path] = true; });
+        state.results = state.results.filter(function (r) { return !okSet[r.path]; });
+        state.selected = {};
+        renderResults();
+        loadQuar();
+      }).catch(function (e) { toast(e.message); });
+  };
+
+  /* ---------- P3 暂存区 ---------- */
+  function loadQuar() {
+    api('/api/quarantine').then(function (data) {
+      state.quar = data.entries || [];
+      renderQuar(data.root);
+      show('quar');
+    }).catch(function (e) { toast(e.message); });
+  }
+
+  function renderQuar(root) {
+    var total = 0;
+    state.quar.forEach(function (e) { total += e.sizeBytes; });
+    $('quarStat').textContent = state.quar.length
+      ? '待处理 ' + state.quar.length + ' 个文件，共 ' + fmtSize(total)
+      : '';
+    $('btnRestoreAll').disabled = !state.quar.length;
+    $('btnDeleteAll').disabled = !state.quar.length;
+    if (!state.quar.length) {
+      $('quarBody').innerHTML = '<div class="empty">暂存区已清空，本次自查完成，请导出报告留存。</div>';
+      return;
+    }
+    var rows = state.quar.map(function (e) {
+      var tags = e.matchedRules.map(function (m) { return '<span class="tag">' + esc(ruleLabel(m)) + '</span>'; }).join('');
+      return '<tr>' +
+        '<td>' + esc(e.originalPath) + '</td>' +
+        '<td style="white-space:nowrap">' + fmtSize(e.sizeBytes) + '</td>' +
+        '<td>' + tags + '</td>' +
+        '<td style="white-space:nowrap">' + fmtTime(e.movedAt) + '</td>' +
+        '<td><button class="btn btn-sm rst" data-id="' + esc(e.id) + '">还原</button></td></tr>';
+    }).join('');
+    $('quarBody').innerHTML =
+      '<p class="muted" style="margin-bottom:10px">暂存目录：' + esc(root) + '（文件已移出原位置，确认无误后点击底部"确认删除"）</p>' +
+      '<table><tr><th>原路径</th><th>大小</th><th>命中原因</th><th>移入时间</th><th>操作</th></tr>' + rows + '</table>';
+  }
+
+  $('quarBody').addEventListener('click', function (e) {
+    var id = e.target.getAttribute && e.target.getAttribute('data-id');
+    if (!id) return;
+    api('/api/restore', { method: 'POST', body: JSON.stringify({ ids: [id] }) })
+      .then(function (res) {
+        toast(res.results[0].ok ? '已还原到原位置' : '还原失败：' + res.results[0].error);
+        loadQuar();
+      }).catch(function (er) { toast(er.message); });
+  });
+
+  $('btnRestoreAll').onclick = function () {
+    var ids = state.quar.map(function (e) { return e.id; });
+    if (!ids.length) return;
+    api('/api/restore', { method: 'POST', body: JSON.stringify({ ids: ids }) })
+      .then(function () { toast('已全部还原'); loadQuar(); })
+      .catch(function (e) { toast(e.message); });
+  };
+
+  $('btnDeleteAll').onclick = function () {
+    var ids = state.quar.map(function (e) { return e.id; });
+    if (!ids.length) return;
+    var total = 0;
+    state.quar.forEach(function (e) { total += e.sizeBytes; });
+    confirmModal('确认删除',
+      '将把 ' + ids.length + ' 个文件（共 ' + fmtSize(total) + '）移入系统回收站。如需反悔，仍可在回收站中找回。确定继续？',
+      function () {
+        api('/api/delete', { method: 'POST', body: JSON.stringify({ ids: ids }) })
+          .then(function (res) {
+            var fail = res.results.filter(function (r) { return !r.ok; });
+            toast(fail.length ? fail.length + ' 个删除失败' : '已全部移入回收站');
+            loadQuar();
+          }).catch(function (e) { toast(e.message); });
+      });
+  };
+
+  $('btnReport').onclick = function () {
+    api('/api/report').then(function (res) {
+      var blob = new Blob([res.html], { type: 'text/html' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '自查报告.html';
+      a.click();
+      toast('报告已下载，并已存至：' + res.savedTo);
+    }).catch(function (e) { toast(e.message); });
+  };
+
+  $('btnExit').onclick = function () {
+    if (state.quar.length) {
+      toast('暂存区还有待处理文件，请先还原或删除');
+      return;
+    }
+    confirmModal('完成并退出', '将关闭自查工具。确定退出？', function () {
+      api('/api/exit', { method: 'POST' }).catch(function () {});
+      clearInterval(beatTimer);
+      show('done');
+      $('footQuar').style.display = 'none';
+    });
+  };
+
+  /* ---------- 心跳 ---------- */
+  var beatTimer = setInterval(function () {
+    api('/api/heartbeat', { method: 'POST' }).catch(function () {});
+  }, 30000);
+})();
+</script>
+</body>
+</html>

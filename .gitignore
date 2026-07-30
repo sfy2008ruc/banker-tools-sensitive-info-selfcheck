@@ -1,0 +1,10 @@
+# 构建产物（发布包走 GitHub Releases）
+build/out/
+/selfcheck
+/selfcheck.exe
+
+# 本地会话配置
+.claude/
+
+# 系统文件
+.DS_Store

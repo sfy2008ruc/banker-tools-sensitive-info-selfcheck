@@ -1,0 +1,19 @@
+{
+  "version": "202607",
+  "keywords": ["身份证", "宽表", "证", "合同", "执照", "手机", "地址", "流水", "房产", "征信", "授信", "客户"],
+  "extensions": [".doc", ".docx", ".xls", ".xlsx", ".csv", ".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".zip", ".rar"],
+  "hotDirs": {
+    "windows": ["%USERPROFILE%\\Desktop", "%USERPROFILE%\\Downloads", "%USERPROFILE%\\Documents", "%USERPROFILE%\\Documents\\WeChat Files", "%USERPROFILE%\\Documents\\Tencent Files"],
+    "linux": ["~/桌面", "~/下载", "~/文档", "~/Desktop", "~/Downloads", "~/Documents"]
+  },
+  "scanRoots": {
+    "windows": ["%USERPROFILE%", "D:\\", "E:\\", "F:\\"],
+    "linux": ["~", "/media", "/mnt"]
+  },
+  "excludeDirs": {
+    "windows": ["C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "%USERPROFILE%\\AppData"],
+    "linux": ["/proc", "/sys", "/usr", "/opt", "/var", "~/.cache", "~/.config"]
+  },
+  "minImageSizeKB": 30,
+  "maxFileSizeMB": 500
+}
