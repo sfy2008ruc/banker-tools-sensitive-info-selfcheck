@@ -24,7 +24,7 @@ import (
 )
 
 // Version 与规则版本一同打印在自查报告中（spec 10.2）。
-const Version = "v1.1.1"
+const Version = "v1.1.2"
 
 func main() {
 	log.SetFlags(log.Ltime)

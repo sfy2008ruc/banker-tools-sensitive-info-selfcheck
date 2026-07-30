@@ -7,13 +7,10 @@
   <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)"/>
   <path d="M150 96 h150 l70 70 v250 a20 20 0 0 1 -20 20 H150 a20 20 0 0 1 -20 -20 V116 a20 20 0 0 1 20 -20 z" fill="#ffffff"/>
   <path d="M300 96 l70 70 h-56 a14 14 0 0 1 -14 -14 z" fill="#c9ddf0"/>
-  <rect x="166" y="300" width="120" height="16" rx="8" fill="#c9ddf0"/>
-  <g transform="rotate(-8 232 210)">
-    <rect x="142" y="122" width="180" height="176" rx="14" fill="#ffffff" stroke="#d43b3b" stroke-width="12" opacity=".95"/>
-    <text x="196" y="190" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="66" font-weight="bold" fill="#d43b3b">敏</text>
-    <text x="270" y="190" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="66" font-weight="bold" fill="#d43b3b">感</text>
-    <text x="196" y="272" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="66" font-weight="bold" fill="#d43b3b">自</text>
-    <text x="270" y="272" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="66" font-weight="bold" fill="#d43b3b">查</text>
+  <rect x="166" y="322" width="110" height="16" rx="8" fill="#c9ddf0"/>
+  <g transform="rotate(-8 240 210)">
+    <rect x="138" y="108" width="204" height="204" rx="20" fill="#ffffff" stroke="#d43b3b" stroke-width="16" opacity=".96"/>
+    <text x="240" y="278" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="168" font-weight="bold" fill="#d43b3b">查</text>
   </g>
   <circle cx="330" cy="330" r="78" fill="#245a94" opacity=".25"/>
   <circle cx="326" cy="326" r="64" fill="none" stroke="#ffb454" stroke-width="26"/>
