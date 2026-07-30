@@ -94,8 +94,15 @@ EOF
 chmod +x "$OUT/mac/selfcheck" "$OUT/mac/启动自查工具.command"
 (cd "$OUT/mac" && zip -qry "../自查工具-$VERSION-macos-universal.zip" .)
 
+echo "== 生成 GitHub 发布用 ASCII 命名副本（GitHub 会剥离附件名中的中文）"
+(cd "$OUT" &&
+  cp "自查工具-$VERSION-windows-x64.zip"     "selfcheck-$VERSION-windows-x64.zip" &&
+  cp "自查工具-$VERSION-macos-universal.zip" "selfcheck-$VERSION-macos-universal.zip" &&
+  cp "自查工具-$VERSION-信创-x64.tar.gz"     "selfcheck-$VERSION-xinchuang-linux-x64.tar.gz" &&
+  cp "自查工具-$VERSION-信创-arm64.tar.gz"   "selfcheck-$VERSION-xinchuang-linux-arm64.tar.gz")
+
 echo "== 生成校验和"
-(cd "$OUT" && shasum -a 256 自查工具-* > SHA256SUMS.txt)
+(cd "$OUT" && shasum -a 256 selfcheck-$VERSION-* > SHA256SUMS.txt)
 
 echo
 echo "== 产物清单"
